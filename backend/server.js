@@ -19,4 +19,4 @@ app.use('/api', api)
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }))
 app.use((error, req, res, next) => { console.error('[kyk-api]', error.message); res.status(500).json({ message: 'Something went wrong. Please try again.' }) })
 
-app.listen(port, async () => { console.log(`[kyk-api] listening on http://localhost:${port}`); try { await checkDatabase(); console.log('[kyk-api] MySQL connected') } catch (error) { console.error('[kyk-api] MySQL unavailable:', error.message) } })
+app.listen(port, '0.0.0.0', async () => { console.log(`[kyk-api] listening on http://localhost:${port}`); try { await checkDatabase(); console.log('[kyk-api] MySQL connected') } catch (error) { console.error('[kyk-api] MySQL unavailable:', error.message) } })
