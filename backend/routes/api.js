@@ -7,8 +7,12 @@ import { authenticateToken, requireAdmin, requireCandidate, requireEmployee } fr
 const router = Router()
 const clean = value => typeof value === 'string' ? value.trim() : value
 const tokenFor = user => jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' })
-const setToken = (res, token) => res.cookie('kyk_token', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
-
+const setToken = (res, token) => res.cookie('kyk_token', token, {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 router.post('/auth/register', async (req, res, next) => { try { const { name, email, password, phone } = req.body; if (!name || !email || !password || password.length < 8) return res.status(400).json({ message: 'Name, valid email, and an 8-character password are required.' }); const hash = await bcrypt.hash(password, 12); const result = await query('INSERT INTO users (name,email,password_hash,phone,role) VALUES (?,?,?,?,\'candidate\')', [clean(name), clean(email).toLowerCase(), hash, clean(phone) || null]); const user = { id: result.insertId, name: clean(name), email: clean(email).toLowerCase(), role: 'candidate' }; setToken(res, tokenFor(user)); res.status(201).json({ user }) } catch (e) { if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'An account with that email already exists.' }); next(e) } })
 router.post('/auth/login', async (req, res, next) => { try { const { email, password } = req.body; const rows = await query('SELECT * FROM users WHERE email = ? LIMIT 1', [clean(email)?.toLowerCase()]); if (!rows[0] || !rows[0].is_active || !(await bcrypt.compare(password || '', rows[0].password_hash))) return res.status(401).json({ message: 'Email or password is incorrect.' }); const { password_hash, ...user } = rows[0]; setToken(res, tokenFor(user)); res.json({ user }) } catch (e) { next(e) } })
 router.post('/auth/logout', (req, res) => { res.clearCookie('kyk_token'); res.json({ message: 'Logged out.' }) })
